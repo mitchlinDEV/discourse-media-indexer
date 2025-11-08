@@ -1,0 +1,9 @@
+# frozen_string_literal: true
+# name: discourse-media-indexer
+# about: List media from a mounted path for tagging/publishing
+# version: 0.0.1
+# authors: mitchlinDEV
+# url: https://github.com/mitchlinDEV/discourse-media-indexer
+# required_version: 3.0.0
+
+enabled_site_setting :media_index_enabled
