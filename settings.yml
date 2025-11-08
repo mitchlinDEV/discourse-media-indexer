@@ -1,0 +1,10 @@
+plugins:
+  media_index_enabled:
+    default: true
+    client: false
+  media_index_root_path:
+    default: "/mnt/media/public"
+    client: false
+  media_index_extensions:
+    default: "mp4|webm|jpg|jpeg|png|webp"
+    client: false
