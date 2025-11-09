@@ -10,8 +10,12 @@ enabled_site_setting :media_index_enabled
 
 after_initialize do
   module ::DiscourseMediaIndexer; end
+
   class ::DiscourseMediaIndexer::Engine < ::Rails::Engine
     engine_name "discourse_media_indexer"
     isolate_namespace DiscourseMediaIndexer
   end
+
+  # load plugin routes so /discourse_media_indexer/list works
+  load File.expand_path("../config/routes.rb", __FILE__)
 end
