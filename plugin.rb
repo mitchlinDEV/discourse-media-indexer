@@ -18,4 +18,6 @@ after_initialize do
 
   # load plugin routes so /discourse_media_indexer/list works
   load File.expand_path("../config/routes.rb", __FILE__)
+  # Ensure media indexer scheduled job is loaded
+  load File.expand_path("app/jobs/scheduled/media_indexer_scan.rb", __dir__)
 end
