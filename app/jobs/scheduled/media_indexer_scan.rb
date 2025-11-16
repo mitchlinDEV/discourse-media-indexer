@@ -1,147 +1,194 @@
 # frozen_string_literal: true
 
-# Scheduled job for the media indexer.
-#
-# This job:
-#   - walks the configured root folder
-#   - finds media files with allowed extensions
-#   - stores/updates records in media_indexer_files
-#   - extracts XPKeywords / Keywords as tags (if exiftool support is available)
-#   - syncs those into media_indexer_tags + media_indexer_file_tags
-#   - removes DB rows for files that no longer exist
-
 require "find"
-require "digest/sha1"
+require "digest"
 
-module ::DiscourseMediaIndexer
-  class Scanner
-    def self.run
-      return unless SiteSetting.media_index_enabled
+module ::Jobs
+  class MediaIndexerScan < ::Jobs::Scheduled
+    every 1.hour
 
-      root = SiteSetting.media_index_root_path.to_s.strip
-      if root.blank? || !::File.directory?(root)
+    def execute(_args = {})
+      root = SiteSetting.media_indexer_root_path
+      if root.blank?
+        Rails.logger.warn("[MediaIndexer] root path is blank; aborting scan")
+        return
+      end
+
+      unless File.directory?(root)
         Rails.logger.warn("[MediaIndexer] root path '#{root}' is not a directory; aborting scan")
         return
       end
 
-      # Combine configured extensions with a broad default set
-      configured_exts =
-        SiteSetting.media_index_extensions.to_s.split(/[|,;\s]+/).map(&:downcase)
+      extensions = normalized_extensions
+      Rails.logger.info("[MediaIndexer] scan starting at '#{root}', #{extensions.size} extensions")
 
-      default_exts = %w[
-        jpg jpeg png gif webp bmp tif tiff heic heif
-        mp4 m4v mkv webm avi mov wmv flv mpg mpeg ts m2ts ogv 3gp 3g2
-      ]
+      tracked = 0
 
-      allowed_exts = (configured_exts + default_exts).map(&:downcase).uniq
+      Find.find(root) do |abs_path|
+        next unless File.file?(abs_path)
 
-      Rails.logger.info("[MediaIndexer] scan starting at '#{root}', #{allowed_exts.size} extensions")
-
-      seen_paths = []
-
-      Find.find(root) do |path|
-        next unless ::File.file?(path)
-
-        ext = ::File.extname(path).delete(".").downcase
+        ext = File.extname(abs_path).downcase.delete(".")
         next if ext.blank?
-        next unless allowed_exts.include?(ext)
+        next unless extensions.include?(ext)
 
-        seen_paths << path
-
-        begin
-          stat = ::File.stat(path)
-        rescue StandardError => e
-          Rails.logger.warn("[MediaIndexer] stat failed for #{path}: #{e.message}")
-          next
-        end
-
-        relative = path.sub(/\A#{Regexp.escape(root)}\/?/, "")
-        filename = ::File.basename(path)
-
-        media = DiscourseMediaIndexer::MediaFile.find_or_initialize_by(path: path)
-        media.filename  = filename
-        media.extension = ext
-        media.size      = stat.size
-        media.mtime     = stat.mtime
-
-        # SHA1 for dedupe
-        begin
-          media.sha1 = Digest::SHA1.file(path).hexdigest
-        rescue StandardError => e
-          Rails.logger.warn("[MediaIndexer] sha1 failed for #{path}: #{e.message}")
-        end
-
-        # TODO: width/height and duration can be filled using ffprobe / mini_magick later
-        media.save!
-
-        # XPKeywords / Keywords -> tags
-        tags = extract_keywords(path)
-        if tags.any?
-          tag_records = DiscourseMediaIndexer::Tag.ensure_all(tags)
-          media.tags = tag_records
-        else
-          media.tags.clear if media.tags.any?
-        end
+        media_file = index_file(root, abs_path, ext)
+        tracked += 1 if media_file
       end
 
-      # Remove DB entries for files that disappeared
-      if seen_paths.any?
-        DiscourseMediaIndexer::MediaFile
-          .where("path LIKE ?", "#{root}%")
-          .where.not(path: seen_paths)
-          .destroy_all
-      end
-
-      Rails.logger.info("[MediaIndexer] scan finished; tracked #{seen_paths.size} files")
+      Rails.logger.info("[MediaIndexer] scan finished; tracked #{tracked} files")
     rescue StandardError => e
-      Rails.logger.error("[MediaIndexer] scan failed: #{e.class}: #{e.message}\n#{e.backtrace.join("\n")}")
+      Rails.logger.error(
+        "[MediaIndexer] scan failed: #{e.class}: #{e.message}\n#{e.backtrace.join("\n")}",
+      )
     end
 
-    # Attempt to read XPKeywords / Keywords from file metadata.
-    # Uses mini_exiftool if available; otherwise logs and returns [].
-    def self.extract_keywords(path)
-      begin
-        require "mini_exiftool"
-      rescue LoadError
-        Rails.logger.debug("[MediaIndexer] mini_exiftool not available; skipping keywords for #{path}")
-        return []
-      end
+    private
 
-      exif = MiniExiftool.new(path)
-
-      raw =
-        exif["XPKeywords"] ||
-        exif["Keywords"]   ||
-        exif["Subject"]
-
-      values =
-        case raw
-        when String
-          raw.split(/[;,]/)
-        when Array
-          raw
-        else
-          []
-        end
-
-      values
-        .map { |v| v.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "") }
-        .map(&:strip)
+    def normalized_extensions
+      raw = SiteSetting.media_indexer_extensions.to_s
+      raw
+        .split(/[,\s|]+/)
+        .map { |e| e.downcase.delete(".") }
         .reject(&:blank?)
         .uniq
-    rescue StandardError => e
-      Rails.logger.warn("[MediaIndexer] failed to read keywords for #{path}: #{e.message}")
+    end
+
+    def index_file(root, abs_path, ext)
+      rel_path = abs_path.sub(%r{\A#{Regexp.escape(root)}/?}, "")
+
+      stat = File.stat(abs_path) rescue nil
+
+      media_file = ::DiscourseMediaIndexer::MediaFile.find_or_initialize_by(path: rel_path)
+
+      kind = image_extension?(ext) ? "image" : "video"
+      media_file.kind = kind
+      media_file.size = stat&.size
+
+      # Only compute checksum once; this is relatively expensive
+      if media_file.checksum.blank?
+        media_file.checksum = Digest::SHA1.file(abs_path).hexdigest rescue nil
+      end
+
+      xp = extract_keywords(abs_path, kind)
+      media_file.xpkeywords = xp.join("|") if xp.present?
+
+      media_file.save!
+
+      update_tags_for(media_file, xp)
+
+      media_file
+    end
+
+    IMAGE_EXTENSIONS = %w[
+      jpg jpeg jpe png gif webp bmp tif tiff heic heif avif jxl
+    ].freeze
+
+    def image_extension?(ext)
+      IMAGE_EXTENSIONS.include?(ext)
+    end
+
+    # Extract tags/keywords from multiple locations:
+    # - Images: Exif / IFD0: XPKeywords, XPComment, Subject, Keywords, Comment, Title, Description, TagsList
+    # - Video: QuickTime/Track2/Keys: Keywords, Comment, Title, Description, Subject, XPKeywords
+    # - Any other tag whose name looks like *Keyword(s)*, *Comment*, *Title*, or Keys+Keywords.
+    # Tags are separated by ';' (primary), but we also split on ',' and '|' for robustness.
+    def extract_keywords(abs_path, kind)
+      require "mini_exiftool"
+
+      exif = MiniExiftool.new(abs_path)
+
+      image_keys = %w[
+        XPKeywords
+        XPComment
+        Subject
+        Keywords
+        Comment
+        Title
+        Description
+        TagsList
+      ]
+
+      video_keys = %w[
+        Keywords
+        Comment
+        Title
+        Description
+        Subject
+        XPKeywords
+      ]
+
+      keys_to_check =
+        if kind == "image"
+          image_keys
+        else
+          video_keys
+        end
+
+      raw_values = []
+
+      # 1) Explicit, well-known fields
+      keys_to_check.each do |k|
+        val = exif[k]
+        next if val.nil? || (val.respond_to?(:empty?) && val.empty?)
+
+        if val.is_a?(Array)
+          raw_values.concat(val)
+        else
+          raw_values << val
+        end
+      end
+
+      # 2) Catch-all for other metadata keys that look like keyword/comment/title fields,
+      #    including QuickTime keys like "Keys:Keywords", "Track2 Itemlist Comment", etc.
+      exif.to_hash.each do |tag_name, val|
+        next if val.nil? || (val.respond_to?(:empty?) && val.empty?)
+
+        name = tag_name.to_s
+
+        # Skip if we already handled this as an explicit key
+        next if keys_to_check.include?(name)
+
+        # Match things like:
+        # - "...Keywords" or "...Keyword"
+        # - "...Comment"
+        # - "...Title"
+        # - "Keys:Keywords", "Keys Keywords", etc.
+        next unless
+          name =~ /(keyword|keywords)\b/i ||
+          name =~ /\bcomment\b/i ||
+          name =~ /\btitle\b/i ||
+          name =~ /keys.*keywords/i
+
+        if val.is_a?(Array)
+          raw_values.concat(val)
+        else
+          raw_values << val
+        end
+      end
+
+      raw_values
+        .flat_map { |v| v.to_s.split(/[;,\|]/) } # primary separator ';', but also ',' and '|'
+        .map { |v| v.to_s.strip }
+        .reject(&:blank?)
+        .uniq
+    rescue StandardError
       []
     end
-  end
-end
 
-class ::Jobs::MediaIndexerScan < ::Jobs::Scheduled
-  # How often to run – you can adjust this later in code or by using a
-  # per-job setting if needed.
-  every 1.hour
+    def update_tags_for(media_file, xpkeywords)
+      xpkeywords ||= []
+      return if xpkeywords.empty?
 
-  def execute(_args)
-    ::DiscourseMediaIndexer::Scanner.run
+      # Reset associations so DB matches current tags exactly
+      media_file.file_tags.destroy_all
+
+      xpkeywords.each do |name|
+        tag = ::DiscourseMediaIndexer::Tag.find_or_create_by!(name: name)
+        ::DiscourseMediaIndexer::FileTag.find_or_create_by!(
+          media_file_id: media_file.id,
+          tag_id: tag.id,
+        )
+      end
+    end
   end
 end
