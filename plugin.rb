@@ -9,15 +9,13 @@
 enabled_site_setting :media_index_enabled
 
 after_initialize do
-  module ::DiscourseMediaIndexer; end
-
-  class ::DiscourseMediaIndexer::Engine < ::Rails::Engine
-    engine_name "discourse_media_indexer"
-    isolate_namespace DiscourseMediaIndexer
+  # Ensure models and job are loaded
+  %w[
+    app/models/discourse_media_indexer/media_file.rb
+    app/models/discourse_media_indexer/tag.rb
+    app/models/discourse_media_indexer/file_tag.rb
+    app/jobs/scheduled/media_indexer_scan.rb
+  ].each do |rel|
+    load File.expand_path(rel, __dir__)
   end
-
-  # load plugin routes so /discourse_media_indexer/list works
-  load File.expand_path("../config/routes.rb", __FILE__)
-  # Ensure media indexer scheduled job is loaded
-  load File.expand_path("app/jobs/scheduled/media_indexer_scan.rb", __dir__)
 end
