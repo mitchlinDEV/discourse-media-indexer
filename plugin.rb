@@ -5,6 +5,7 @@
 # authors: mitchlinDEV
 # url: https://github.com/mitchlinDEV/discourse-media-indexer
 # required_version: 3.0.0
+gem "mini_exiftool", "~> 2.10"
 
 enabled_site_setting :media_index_enabled
 
