@@ -14,8 +14,8 @@ after_initialize do
     app/models/discourse_media_indexer/media_file.rb
     app/models/discourse_media_indexer/tag.rb
     app/models/discourse_media_indexer/file_tag.rb
-    app/jobs/scheduled/media_indexer_scan.rb
     app/controllers/discourse_media_indexer/media_controller.rb
+    app/jobs/scheduled/media_indexer_scan.rb
   ].each do |rel|
     load File.expand_path(rel, __dir__)
   end
