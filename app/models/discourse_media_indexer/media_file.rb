@@ -3,7 +3,14 @@
 module DiscourseMediaIndexer
   class MediaFile < ::ActiveRecord::Base
     self.table_name = "media_indexer_files"
+      class DiscourseMediaIndexer::MediaFile < ActiveRecord::Base
+        self.table_name = "media_indexer_files"
 
+        # Map the expected "checksum" attribute to the existing "sha1" column
+        alias_attribute :checksum, :sha1
+
+        # …rest of the file…
+      end
     has_many :file_tags,
              class_name: "DiscourseMediaIndexer::FileTag",
              foreign_key: :media_indexer_file_id,
