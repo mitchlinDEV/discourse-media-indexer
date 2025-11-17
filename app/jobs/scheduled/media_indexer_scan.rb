@@ -60,15 +60,22 @@ module ::Jobs
 
       media_file = ::DiscourseMediaIndexer::MediaFile.find_or_initialize_by(path: rel_path)
 
+      # --- NEW REQUIRED FIELDS ---
+      media_file.filename  = File.basename(rel_path)
+      media_file.extension = ext.downcase
+      media_file.directory = File.dirname(rel_path) == "." ? "" : File.dirname(rel_path) if media_file.respond_to?(:directory=)
+      # ----------------------------
+
       kind = image_extension?(ext) ? "image" : "video"
       media_file.kind = kind
       media_file.size = stat&.size
 
-      # Only compute checksum once; this is relatively expensive
+      # Compute checksum only once
       if media_file.checksum.blank?
         media_file.checksum = Digest::SHA1.file(abs_path).hexdigest rescue nil
       end
 
+      # Extract tags via EXIF or video metadata
       xp = extract_keywords(abs_path, kind)
       media_file.xpkeywords = xp.join("|") if xp.present?
 
