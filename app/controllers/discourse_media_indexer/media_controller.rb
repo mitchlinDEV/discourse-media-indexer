@@ -9,8 +9,8 @@ module DiscourseMediaIndexer
     def index
       raise Discourse::InvalidParameters.new(:limit) if limit < 1 || limit > 2000
 
-      root = SiteSetting.media_index_root_path
-      exts = SiteSetting.media_index_extensions.split("|").map { |e| ".#{e.downcase}" }
+      root = SiteSetting.media_indexer_root_path
+      exts = SiteSetting.media_indexer_extensions.split("|").map { |e| ".#{e.downcase}" }
 
       list = []
       require "find"

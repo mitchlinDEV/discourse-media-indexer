@@ -6,7 +6,7 @@
 # url: https://github.com/mitchlinDEV/discourse-media-indexer
 # required_version: 3.0.0
 
-enabled_site_setting :media_index_enabled
+enabled_site_setting :media_indexer_enabled
 
 after_initialize do
   # Ensure models and job are loaded

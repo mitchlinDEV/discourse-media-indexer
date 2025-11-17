@@ -1,10 +1,10 @@
 plugins:
-  media_index_enabled:
+  media_indexer_enabled:
     default: true
     client: false
-  media_index_root_path:
+  media_indexer_root_path:
     default: "/mnt/media/public"
     client: false
-  media_index_extensions:
+  media_indexer_extensions:
     default: "mp4|webm|jpg|jpeg|png|webp"
     client: false
