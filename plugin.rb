@@ -21,4 +21,6 @@ after_initialize do
   ].each do |rel|
     load File.expand_path(rel, __dir__)
   end
+  # add this line to load the routes
+  load File.expand_path("config/routes.rb", __dir__)
 end
