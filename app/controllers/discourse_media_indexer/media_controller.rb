@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 module DiscourseMediaIndexer
   class MediaController < ::ApplicationController
-    requires_plugin ::DiscourseMediaIndexer
+    requires_plugin "discourse-media-indexer"
 
     before_action :ensure_logged_in
     before_action :ensure_staff
