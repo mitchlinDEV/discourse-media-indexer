@@ -2,7 +2,8 @@
 
 module DiscourseMediaIndexer
   class DbMediaController < ::ApplicationController
-    requires_plugin DiscourseMediaIndexer::PLUGIN_NAME
+    # Match your existing MediaController
+    requires_plugin ::DiscourseMediaIndexer
 
     before_action :ensure_logged_in
     before_action :ensure_staff
@@ -51,7 +52,6 @@ module DiscourseMediaIndexer
 
     private
 
-    # Base scope with eager loading
     def base_relation
       DiscourseMediaIndexer::MediaFile
         .includes(:tags)
@@ -89,7 +89,6 @@ module DiscourseMediaIndexer
       if relation.column_names.include?("folder")
         relation.where(folder: folders)
       else
-        # Path-based folder: first segment before "/"
         conditions = folders.map { |_| "path LIKE ?" }
         values     = folders.map { |f| "#{f}/%" }
 
