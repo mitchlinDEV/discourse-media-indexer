@@ -11,16 +11,18 @@ gem 'mini_exiftool', '2.11.0', require: false
 enabled_site_setting :media_indexer_enabled
 
 after_initialize do
-  # Ensure models and job are loaded
+  # Ensure models, controllers and job are loaded
   %w[
     app/models/discourse_media_indexer/media_file.rb
     app/models/discourse_media_indexer/tag.rb
     app/models/discourse_media_indexer/file_tag.rb
     app/controllers/discourse_media_indexer/media_controller.rb
+    app/controllers/discourse_media_indexer/db_media_controller.rb
     app/jobs/scheduled/media_indexer_scan.rb
   ].each do |rel|
     load File.expand_path(rel, __dir__)
   end
-  # add this line to load the routes
+
+  # Load plugin routes
   load File.expand_path("config/routes.rb", __dir__)
 end
