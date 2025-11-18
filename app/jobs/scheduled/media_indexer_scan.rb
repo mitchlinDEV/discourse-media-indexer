@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+require "set"
 require "mini_exiftool"
 require "find"
 require "digest"
@@ -87,11 +88,10 @@ module ::Jobs
         media_file.checksum = digest
       end
 
-      # Extract EXIF/IPTC/XMP keywords
+      # Extract EXIF/IPTC/XMP/QuickTime keywords
       keywords = extract_keywords(abs_path, kind)
 
       # Store raw keywords in the xpkeywords column (if present on the model)
-      # You can change the join character if you prefer commas/semicolons
       media_file.xpkeywords = keywords.join("|") if media_file.respond_to?(:xpkeywords=)
 
       media_file.save!
@@ -107,46 +107,100 @@ module ::Jobs
       nil
     end
 
+    # Collect keywords/tags from a file (images + videos)
+    # kind is currently unused but kept for future format-specific logic
     def extract_keywords(abs_path, kind)
       keywords = []
+      seen = Set.new
 
       begin
         exif = MiniExiftool.new(abs_path)
 
-        # Windows XP-style keywords
-        xp = exif["XPKeywords"]
-        keywords.concat(normalize_keywords_value(xp))
+        # Explicit keys across many schemas/namespaces
+        preferred_keys = [
+          "XPKeywords",          # Windows XP / classic tags
+          "Keywords",            # generic IPTC/XMP keywords
+          "Subject",             # often used as keywords
+          "Category",            # Microsoft/Photos category
+          "Tags",                # generic tags field
+          "MicrosoftKeywords",
+          "MicrosoftCategory",
 
-        # Generic IPTC/XMP keywords
-        kw = exif["Keywords"]
-        keywords.concat(normalize_keywords_value(kw))
+          # XMP / PDF
+          "XMP-dc:Subject",
+          "XMP-pdf:Keywords",
+          "PDF:Keywords",
 
-        # Sometimes people use Subject as a keyword-ish field
-        subj = exif["Subject"]
-        keywords.concat(normalize_keywords_value(subj))
+          # QuickTime / MP4 (videos)
+          "QuickTime:Keywords",
+          "QuickTime:Category",
+          "QuickTime:Genre",
+        ]
+
+        # 1) Explicit keys
+        preferred_keys.each do |key|
+          value = safe_exif_get(exif, key)
+          normalize_keywords_value(value).each do |tag|
+            down = tag.downcase
+            next if seen.include?(down)
+
+            seen << down
+            keywords << tag
+          end
+        end
+
+        # 2) Generic sweep: any key that ends with
+        #    Keywords / Keyword / Subject / Category / Tags / Tag
+        if exif.respond_to?(:to_hash)
+          exif.to_hash.each do |k, v|
+            key_str = k.to_s
+            next unless key_str =~ /(keywords?|subject|category|tags?)$/i
+
+            normalize_keywords_value(v).each do |tag|
+              down = tag.downcase
+              next if seen.include?(down)
+
+              seen << down
+              keywords << tag
+            end
+          end
+        end
       rescue MiniExiftool::Error => e
         Rails.logger.warn(
           "[MediaIndexer] EXIF read failed for #{abs_path}: #{e.class}: #{e.message}",
         )
       end
 
-      # Cleanup: strip, drop blanks, dedupe
       keywords
-        .map { |k| k.to_s.strip }
-        .reject(&:blank?)
-        .uniq
     end
 
+    # Normalize a metadata value into a flat array of tag strings.
+    # Handles arrays and scalar values, splitting on common list separators.
     def normalize_keywords_value(value)
       return [] if value.nil?
 
-      case value
-      when Array
-        value
-      else
-        # XPKeywords often comes back as "tag1; tag2;tag3"
-        value.to_s.split(/[;,]/)
+      raw_values =
+        if value.is_a?(Array)
+          value.map(&:to_s)
+        else
+          [value.to_s]
+        end
+
+      out = []
+      raw_values.each do |raw|
+        raw.split(/[;,|\*]/).each do |frag|
+          tag = frag.strip
+          out << tag unless tag.empty?
+        end
       end
+
+      out
+    end
+
+    def safe_exif_get(exif, key)
+      exif[key]
+    rescue StandardError
+      nil
     end
 
     def update_tags_for(media_file, keywords)
