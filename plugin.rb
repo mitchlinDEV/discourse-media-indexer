@@ -36,8 +36,10 @@ after_initialize do
   #
   #   /media/9b5834326d18602d4587462cb0fabbde.jpg
   #
-  # The ".jpg" part is cosmetic; we strip it and use the checksum only.
+  # Works for:
+  #   - checksum (without extension)
+  #   - filename (with or without extension)
   Discourse::Application.routes.append do
-    get "/media/:checksum" => "discourse_media_indexer/file_serve#show"
+    get "/media/:token" => "discourse_media_indexer/file_serve#show"
   end
 end
