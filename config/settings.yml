@@ -6,5 +6,8 @@ plugins:
     default: "/mnt/media/public"
     client: false
   media_indexer_extensions:
-    default: "mp4|webm|jpg|jpeg|png|webp"
+    default: "jpg|jpeg|png|gif|webp|mp4|webm|mkv|mov"
     client: false
+  media_indexer_public_prefix:
+    default: "/media"
+    client: true

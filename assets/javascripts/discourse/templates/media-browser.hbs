@@ -1,0 +1,84 @@
+{{!-- assets/javascripts/discourse/templates/media-browser.hbs --}}
+
+<div class="media-browser">
+  <div class="media-browser-header">
+    <h1 class="media-browser-title">
+      Media Browser
+    </h1>
+  </div>
+
+  {{#if this.media.length}}
+    <div class="media-browser-grid">
+      {{#each this.media as |item|}}
+        <div
+          class="media-browser-item {{if (eq item.kind "video") "is-video" "is-image"}}"
+          title={{item.filename}}
+        >
+          <a
+            href={{media-indexer-file-url item}}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {{#if (eq item.kind "image")}}
+              <img
+                class="media-browser-thumb"
+                src={{media-indexer-file-url item}}
+                alt={{item.filename}}
+                loading="lazy"
+              />
+            {{else}}
+              <div class="media-browser-video-placeholder">
+                <span class="media-browser-video-icon">▶</span>
+                <span class="media-browser-video-filename">
+                  {{item.filename}}
+                </span>
+              </div>
+            {{/if}}
+          </a>
+
+          <div class="media-browser-meta">
+            <div class="media-browser-filename">
+              {{item.filename}}
+            </div>
+            {{#if item.xpkeywords}}
+              <div class="media-browser-tags">
+                {{#each item.xpkeywords as |tag|}}
+                  <span class="media-browser-tag-pill">
+                    {{tag}}
+                  </span>
+                {{/each}}
+              </div>
+            {{/if}}
+          </div>
+        </div>
+      {{/each}}
+    </div>
+
+    <div class="media-browser-pagination">
+      <button
+        type="button"
+        class="btn btn-default"
+        disabled={{lte this.page 1}}
+        {{on "click" this.prevPage}}
+      >
+        Previous
+      </button>
+
+      <span class="media-browser-page-indicator">
+        Page {{this.page}}
+      </span>
+
+      <button
+        type="button"
+        class="btn btn-default"
+        {{on "click" this.nextPage}}
+      >
+        Next
+      </button>
+    </div>
+  {{else}}
+    <p class="media-browser-empty">
+      No media found.
+    </p>
+  {{/if}}
+</div>
