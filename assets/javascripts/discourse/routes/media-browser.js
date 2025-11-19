@@ -10,7 +10,7 @@ export default class MediaBrowserRoute extends Route {
   };
 
   model(params) {
-    const page = params.page || 1;
+    const page = Number(params.page || 1);
     const limit = PAGE_SIZE;
     const offset = (page - 1) * PAGE_SIZE;
 

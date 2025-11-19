@@ -1,29 +1,25 @@
-// assets/javascripts/discourse/helpers/media-indexer-file-url.js
+// assets/javascripts/discourse/helpers/media-indexer-url.js
 import { helper } from "@ember/component/helper";
 
 /**
- * Builds a public URL for a media file based on:
- *   - Site setting: media_indexer_public_prefix
- *   - Media item: { path: "images/2025/..." }
+ * Build a public URL for a media item.
  *
- * If the prefix is blank, it falls back to just "path".
+ * Currently:
+ *   /media/<filename>
+ *
+ * Example:
+ *   filename = "9b5834326d18602d4587462cb0fabbde.jpg"
+ *   => "/media/9b5834326d18602d4587462cb0fabbde.jpg"
  */
-export default helper(function mediaIndexerFileUrl([item]) {
+export default helper(function mediaIndexerUrl([item]) {
   if (!item) {
     return "";
   }
 
-  const prefix = (Discourse.SiteSettings.media_indexer_public_prefix || "").trim();
-  const path = (item.path || "").replace(/^\/+/, "");
-
-  if (!prefix) {
-    // Fallback: just return the raw path; may be a full URL if you store it that way
-    return path;
+  const filename = (item.filename || "").trim();
+  if (!filename) {
+    return "";
   }
 
-  if (prefix.endsWith("/")) {
-    return `${prefix}${path}`;
-  } else {
-    return `${prefix}/${path}`;
-  }
+  return `/media/${filename}`;
 });

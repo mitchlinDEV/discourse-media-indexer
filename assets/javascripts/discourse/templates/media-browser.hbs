@@ -10,47 +10,39 @@
   {{#if this.media.length}}
     <div class="media-browser-grid">
       {{#each this.media as |item|}}
-        <div
-          class="media-browser-item {{if (eq item.kind "video") "is-video" "is-image"}}"
-          title={{item.filename}}
-        >
-          <a
-            href={{media-indexer-file-url item}}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {{#if (eq item.kind "image")}}
+        {{!-- Only render images as actual thumbs for step A --}}
+        {{#if (eq item.kind "image")}}
+          <div class="media-browser-item is-image" title={{item.filename}}>
+            <a
+              href={{media-indexer-url item}}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <img
                 class="media-browser-thumb"
-                src={{media-indexer-file-url item}}
+                src={{media-indexer-url item}}
                 alt={{item.filename}}
                 loading="lazy"
               />
-            {{else}}
-              <div class="media-browser-video-placeholder">
-                <span class="media-browser-video-icon">▶</span>
-                <span class="media-browser-video-filename">
-                  {{item.filename}}
-                </span>
-              </div>
-            {{/if}}
-          </a>
+            </a>
 
-          <div class="media-browser-meta">
-            <div class="media-browser-filename">
-              {{item.filename}}
-            </div>
-            {{#if item.xpkeywords}}
-              <div class="media-browser-tags">
-                {{#each item.xpkeywords as |tag|}}
-                  <span class="media-browser-tag-pill">
-                    {{tag}}
-                  </span>
-                {{/each}}
+            <div class="media-browser-meta">
+              <div class="media-browser-filename">
+                {{item.filename}}
               </div>
-            {{/if}}
+
+              {{#if item.xpkeywords}}
+                <div class="media-browser-tags">
+                  {{#each item.xpkeywords as |tag|}}
+                    <span class="media-browser-tag-pill">
+                      {{tag}}
+                    </span>
+                  {{/each}}
+                </div>
+              {{/if}}
+            </div>
           </div>
-        </div>
+        {{/if}}
       {{/each}}
     </div>
 
