@@ -6,21 +6,9 @@
 # url: https://github.com/mitchlinDEV/discourse-media-indexer
 # required_version: 3.0.0
 
-gem "mini_exiftool", "2.11.0", require: false
+gem 'mini_exiftool', '2.11.0', require: false
 
 enabled_site_setting :media_indexer_enabled
-
-# Frontend assets (grid layout, etc.)
-register_asset "stylesheets/common/discourse-media-indexer.scss"
-
-module ::DiscourseMediaIndexer
-  PLUGIN_NAME ||= "discourse-media-indexer"
-
-  class Engine < ::Rails::Engine
-    engine_name PLUGIN_NAME
-    isolate_namespace DiscourseMediaIndexer
-  end
-end
 
 after_initialize do
   # Ensure models, serializers, controllers and job are loaded
@@ -37,6 +25,5 @@ after_initialize do
     load File.expand_path(rel, __dir__)
   end
 
-  # Routes (engine + /discourse_media_indexer/media-db and related)
   load File.expand_path("config/routes.rb", __dir__)
 end
