@@ -5,31 +5,26 @@ module DiscourseMediaIndexer
     requires_plugin "discourse-media-indexer"
 
     def show
-      # :token may be:
-      #   - "<checksum>"
-      #   - "<checksum>.ext"
-      #   - "<filename>"
-      #   - "<filename>.ext"
-      raw = params[:token].to_s
-      raise Discourse::NotFound if raw.blank?
+      # /media/:token(.:format)
+      # For /media/9b58...fabbde.jpg we get:
+      #   params[:token]  = "9b58...fabbde"
+      #   params[:format] = "jpg"
+      base = params[:token].to_s
+      ext_from_url = params[:format].to_s.presence
 
-      # Separate base + extension from token
-      # e.g. "9b58...fabde.jpg" -> base="9b58...fabde", ext="jpg"
-      base = raw.split(".").first
-      ext_from_url = raw.split(".")[1]&.downcase
+      raise Discourse::NotFound if base.blank?
 
-      # Try checksum lookup first
-      media = DiscourseMediaIndexer::MediaFile.find_by(checksum: base)
+      # First try by filename, which is what you’re using now
+      filename_with_ext =
+        if ext_from_url
+          "#{base}.#{ext_from_url}"
+        else
+          base
+        end
 
-      # If not found by checksum, fall back to filename (with or without extension)
-      if media.nil?
-        filename_with_ext = raw
-        filename_without_ext = base
-
-        media =
-          DiscourseMediaIndexer::MediaFile.find_by(filename: filename_with_ext) ||
-          DiscourseMediaIndexer::MediaFile.find_by(filename: filename_without_ext)
-      end
+      media =
+        DiscourseMediaIndexer::MediaFile.find_by(filename: filename_with_ext) ||
+        DiscourseMediaIndexer::MediaFile.find_by(filename: base)
 
       raise Discourse::NotFound if media.nil?
 
@@ -39,7 +34,7 @@ module DiscourseMediaIndexer
 
       raise Discourse::NotFound unless File.file?(abs_path)
 
-      # Determine content type
+      # Determine MIME type from actual file extension
       actual_ext = File.extname(abs_path).delete(".").downcase
       ext = actual_ext.presence || ext_from_url
 
