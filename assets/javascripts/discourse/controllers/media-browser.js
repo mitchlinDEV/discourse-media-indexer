@@ -1,27 +1,28 @@
 // assets/javascripts/discourse/controllers/media-browser.js
 import Controller from "@ember/controller";
-import { tracked } from "@glimmer/tracking";
-import { action } from "@ember/object";
+import { computed } from "@ember/object";
 
-export default class MediaBrowserController extends Controller {
-  queryParams = ["page"];
+export default Controller.extend({
+  queryParams: ["page"],
+  page: 1,
 
-  @tracked page = 1;
+  // Always return an array; avoids any undefined issues
+  media: computed("model.media.[]", function () {
+    const model = this.model || {};
+    return model.media || [];
+  }),
 
-  get media() {
-    return this.model?.media || [];
-  }
+  actions: {
+    nextPage() {
+      const current = this.page || 1;
+      this.set("page", current + 1);
+    },
 
-  @action
-  nextPage() {
-    this.page = (this.page || 1) + 1;
-  }
-
-  @action
-  prevPage() {
-    const current = this.page || 1;
-    if (current > 1) {
-      this.page = current - 1;
-    }
-  }
-}
+    prevPage() {
+      const current = this.page || 1;
+      if (current > 1) {
+        this.set("page", current - 1);
+      }
+    },
+  },
+});

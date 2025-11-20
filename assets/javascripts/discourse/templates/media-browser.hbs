@@ -7,70 +7,63 @@
     </h1>
   </div>
 
-  {{#if this.media.length}}
-    <div class="media-browser-grid">
-      {{#each this.media as |item|}}
-        {{!-- Only render images as actual thumbs for step A --}}
-        {{#if (eq item.kind "image")}}
-          <div class="media-browser-item is-image" title={{item.filename}}>
-            <a
-              href={{media-indexer-url item}}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <img
-                class="media-browser-thumb"
-                src={{media-indexer-url item}}
-                alt={{item.filename}}
-                loading="lazy"
-              />
-            </a>
+  <div class="media-browser-grid">
+    {{#each this.media as |item|}}
+      {{#if (eq item.kind "image")}}
+        <div class="media-browser-item is-image" title={{item.filename}}>
+          <a
+            href={{media-indexer-url item}}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img
+              class="media-browser-thumb"
+              src={{media-indexer-url item}}
+              alt={{item.filename}}
+              loading="lazy"
+            />
+          </a>
 
-            <div class="media-browser-meta">
-              <div class="media-browser-filename">
-                {{item.filename}}
-              </div>
-
-              {{#if item.xpkeywords}}
-                <div class="media-browser-tags">
-                  {{#each item.xpkeywords as |tag|}}
-                    <span class="media-browser-tag-pill">
-                      {{tag}}
-                    </span>
-                  {{/each}}
-                </div>
-              {{/if}}
+          <div class="media-browser-meta">
+            <div class="media-browser-filename">
+              {{item.filename}}
             </div>
+
+            {{#if item.xpkeywords}}
+              <div class="media-browser-tags">
+                {{#each item.xpkeywords as |tag|}}
+                  <span class="media-browser-tag-pill">
+                    {{tag}}
+                  </span>
+                {{/each}}
+              </div>
+            {{/if}}
           </div>
-        {{/if}}
-      {{/each}}
-    </div>
+        </div>
+      {{/if}}
+    {{/each}}
+  </div>
 
-    <div class="media-browser-pagination">
-      <button
-        type="button"
-        class="btn btn-default"
-        disabled={{lte this.page 1}}
-        {{on "click" this.prevPage}}
-      >
-        Previous
-      </button>
+  <div class="media-browser-pagination">
+    <button
+      type="button"
+      class="btn btn-default"
+      disabled={{lte this.page 1}}
+      {{on "click" (action "prevPage")}}
+    >
+      Previous
+    </button>
 
-      <span class="media-browser-page-indicator">
-        Page {{this.page}}
-      </span>
+    <span class="media-browser-page-indicator">
+      Page {{this.page}}
+    </span>
 
-      <button
-        type="button"
-        class="btn btn-default"
-        {{on "click" this.nextPage}}
-      >
-        Next
-      </button>
-    </div>
-  {{else}}
-    <p class="media-browser-empty">
-      No media found.
-    </p>
-  {{/if}}
+    <button
+      type="button"
+      class="btn btn-default"
+      {{on "click" (action "nextPage")}}
+    >
+      Next
+    </button>
+  </div>
 </div>
