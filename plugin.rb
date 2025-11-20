@@ -10,11 +10,10 @@ gem "mini_exiftool", "2.11.0", require: false
 
 enabled_site_setting :media_indexer_enabled
 
-# Frontend assets (grid layout, etc.)
+# CSS for the grid layout
 register_asset "stylesheets/common/discourse-media-indexer.scss"
 
 after_initialize do
-  # Ensure models, serializers, controllers and job are loaded
   %w[
     app/models/discourse_media_indexer/media_file.rb
     app/models/discourse_media_indexer/tag.rb
@@ -30,17 +29,5 @@ after_initialize do
     load File.expand_path(rel, __dir__)
   end
 
-  # Plugin routes (JSON etc.)
   load File.expand_path("config/routes.rb", __dir__)
-
-  # Direct media URL:
-  #
-  #   /media/9b5834326d18602d4587462cb0fabbde.jpg
-  #
-  # Works for:
-  #   - checksum (without extension)
-  #   - filename (with or without extension)
-  Discourse::Application.routes.append do
-    get "/media/:token" => "discourse_media_indexer/file_serve#show"
-  end
 end

@@ -1,0 +1,49 @@
+<div class="media-browser">
+  <div class="media-browser-header">
+    <h1 class="media-browser-title">
+      Media Browser
+    </h1>
+  </div>
+
+  <div class="media-browser-grid">
+    <% @media.each do |item| %>
+      <% next unless item.kind == "image" %>
+
+      <div class="media-browser-item is-image" title="<%= item.filename %>">
+        <a
+          href="/media/<%= item.filename %>"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <img
+            class="media-browser-thumb"
+            src="/media/<%= item.filename %>"
+            alt="<%= item.filename %>"
+            loading="lazy"
+          />
+        </a>
+
+        <div class="media-browser-meta">
+          <div class="media-browser-filename">
+            <%= item.filename %>
+          </div>
+
+          <% if item.xpkeywords.present? %>
+            <div class="media-browser-tags">
+              <% tags =
+                   item.xpkeywords.is_a?(String) ?
+                     item.xpkeywords.split(/[|;,]/).map(&:strip) :
+                     Array(item.xpkeywords) %>
+
+              <% tags.reject(&:blank?).each do |tag| %>
+                <span class="media-browser-tag-pill">
+                  <%= tag %>
+                </span>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
