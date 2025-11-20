@@ -29,15 +29,13 @@ after_initialize do
     load File.expand_path(rel, __dir__)
   end
 
-  # Load JSON API routes
+    # Load the existing JSON routes under /discourse_media_indexer/...
   load File.expand_path("config/routes.rb", __dir__)
 
-  # Test route + media browser route
+  # Test routes: no controller, no DB
   Discourse::Application.routes.append do
-    # Pure Rack endpoint, no controller or DB needed
     get "/media-test" => proc { [200, { "Content-Type" => "text/plain" }, ["media-test OK"]] }
-
-    # Our browser page
-    get "/media-browser" => "discourse_media_indexer/db_browser#index"
+    get "/media-browser" => proc { [200, { "Content-Type" => "text/plain" }, ["media-browser OK"]] }
   end
 end
+
