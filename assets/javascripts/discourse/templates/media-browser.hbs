@@ -8,7 +8,7 @@
   </div>
 
   <div class="media-browser-grid">
-    {{#each this.media as |item|}}
+    {{#each this.model.media as |item|}}
       {{#if (eq item.kind "image")}}
         <div class="media-browser-item is-image" title={{item.filename}}>
           <a
@@ -42,28 +42,5 @@
         </div>
       {{/if}}
     {{/each}}
-  </div>
-
-  <div class="media-browser-pagination">
-    <button
-      type="button"
-      class="btn btn-default"
-      disabled={{lte this.page 1}}
-      {{on "click" (action "prevPage")}}
-    >
-      Previous
-    </button>
-
-    <span class="media-browser-page-indicator">
-      Page {{this.page}}
-    </span>
-
-    <button
-      type="button"
-      class="btn btn-default"
-      {{on "click" (action "nextPage")}}
-    >
-      Next
-    </button>
   </div>
 </div>
