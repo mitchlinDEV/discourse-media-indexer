@@ -1,5 +1,3 @@
-// assets/stylesheets/common/discourse-media-indexer.scss
-
 .media-browser {
   padding: 1.5rem;
 }
@@ -66,20 +64,4 @@
   padding: 0.15rem 0.4rem;
   border-radius: 999px;
   background: var(--tertiary-low);
-}
-
-.media-browser-pagination {
-  margin-top: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-}
-
-.media-browser-page-indicator {
-  font-size: 0.9rem;
-}
-
-.media-browser-empty {
-  margin-top: 1rem;
 }

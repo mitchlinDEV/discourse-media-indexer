@@ -29,5 +29,11 @@ after_initialize do
     load File.expand_path(rel, __dir__)
   end
 
+  # Load the existing JSON routes under /discourse_media_indexer/...
   load File.expand_path("config/routes.rb", __dir__)
+
+  # Ensure /media-browser exists, independent of config/routes.rb
+  Discourse::Application.routes.append do
+    get "/media-browser" => "discourse_media_indexer/db_browser#index"
+  end
 end
